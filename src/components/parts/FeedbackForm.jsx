@@ -29,7 +29,7 @@ function FeedbackForm() {
         formData.append('Email', email);
         formData.append('Phone', phone);
         formData.append('Message', message);
-        axios.post(process.env.NEXT_PUBLIC_GOOGLE_TABLES_API_URL, formData)
+        axios.post('https://script.google.com/macros/s/AKfycbx3E67yE8S0BRYMY2gG2nKyR7wGCMk0h9wBpMNcQAqTMYlE1R1toTEYdxGREEvCflZO/exec', formData)
         .then(response => {
           console.log(response)
           setLoading(false);

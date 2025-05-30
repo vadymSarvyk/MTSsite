@@ -38,7 +38,7 @@ function AboutUs(){
                             </div>
                             <div className="container-row">
                                 <CheckBoxIcon sx={{ fontSize: 40 }} />
-                                <p>Тривалість заняття: дорослі - 80 хв; діти - 60 хв.</p>
+                                <p>Тривалість заняття - 60 хв.</p>
                             </div>
                         </div>
                     </div>

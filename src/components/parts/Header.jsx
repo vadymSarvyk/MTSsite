@@ -30,16 +30,18 @@ const Header = () => {
                         <a href="http://t.me/MotherTongueSchool" className="social-icon">
                             <img src="/images/telegram-128.png" alt="Telegram" />
                         </a>
-                        <a href="https://www.facebook.com/mothertongueschool" className="social-icon">
+                        <a href="https://www.facebook.com/mtschool.kr" className="social-icon">
                             <img src="/images/facebook-128.png" alt="Facebook" />
                         </a>
-                        <a href="https://www.instagram.com/mothertongueschool" className="social-icon">
+                        <a href="https://www.instagram.com/mtschool_kr" className="social-icon">
                             <img src="/images/instagram-2-128.png" alt="Instagram" />
                         </a>
                     </div>
                     <div className="contact-info">
                         <b>+38(097)-111-78-95</b><br />
                         <b>м. Кривий Ріг, вул. Героїв АТО, 11</b>
+                        <br />
+                        <b>м. Кривий Ріг, вул. Мусоргського, 20</b>
                     </div>
                 </div>
             </div>

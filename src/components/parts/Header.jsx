@@ -27,7 +27,7 @@ const Header = () => {
                 </div>
                 <div className="social-section">
                     <div className="social-icons">
-                        <a href="http://t.me/MotherTongueSchool" className="social-icon">
+                        <a href="https://t.me/mtschool_admin" className="social-icon">
                             <img src="/images/telegram-128.png" alt="Telegram" />
                         </a>
                         <a href="https://www.facebook.com/mtschool.kr" className="social-icon">

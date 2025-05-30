@@ -33,6 +33,7 @@ function FeedbackForm() {
         .then(response => {
           console.log(response)
           setLoading(false);
+           setName(''); setEmail(''); setPhone(''); setMessage(''); 
         })
         .catch(error => {
           console.log(error)

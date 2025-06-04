@@ -31,9 +31,10 @@ function FeedbackForm() {
         formData.append('Message', message);
         axios.post('https://script.google.com/macros/s/AKfycbx3E67yE8S0BRYMY2gG2nKyR7wGCMk0h9wBpMNcQAqTMYlE1R1toTEYdxGREEvCflZO/exec', formData)
         .then(response => {
+            setName(''); setEmail(''); setPhone(''); setMessage(''); 
           console.log(response)
           setLoading(false);
-           setName(''); setEmail(''); setPhone(''); setMessage(''); 
+           
         })
         .catch(error => {
           console.log(error)

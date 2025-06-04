@@ -29,9 +29,9 @@ function FeedbackForm() {
         formData.append('Email', email);
         formData.append('Phone', phone);
         formData.append('Message', message);
-        axios.post('https://script.google.com/macros/s/AKfycbx3E67yE8S0BRYMY2gG2nKyR7wGCMk0h9wBpMNcQAqTMYlE1R1toTEYdxGREEvCflZO/exec', formData)
+        axios.post('https://script.google.com/macros/s/AKfycbxyOaaL7ug87dQ9WVF8kGpxx95jhgwZeh2dzQ02xwo06RPqR9Up92QqXlt5_Xpcnq8/exec', formData)
         .then(response => {
-            setName(''); setEmail(''); setPhone(''); setMessage(''); 
+            setName('') setEmail('') setPhone('') setMessage('') 
           console.log(response)
           setLoading(false);
            

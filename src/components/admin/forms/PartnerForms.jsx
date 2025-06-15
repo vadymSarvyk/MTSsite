@@ -46,7 +46,7 @@ const PartnerForm = ({ initialData }) => {
         formData.append("imagePath",partnerData.imagePath)
         try {
             if (initialData) {
-                await axios.put(`/api/partners/${initialData._id}`, formData, {
+                await axios.put(`/api/partners/${initialData.id}`, formData, {
                     headers: {
                         "Authorization": "Bearer " + Cookies.get('token'),
                         "Content-Type": "multipart/form-data",
@@ -103,7 +103,7 @@ const PartnerDeleteForm = ({partner}) => {
         e.preventDefault();
 
         try {
-            await axios.delete(`/api/partners/${partner._id}`, {
+            await axios.delete(`/api/partners/${partner.id}`, {
                 headers: {
                     Authorization: `Bearer ${Cookies.get('token')}`,
                 },

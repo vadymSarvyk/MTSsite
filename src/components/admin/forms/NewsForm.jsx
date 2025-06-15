@@ -52,7 +52,7 @@ const NewsForm = ({ initialNewsData }) => {
         formData.append("imagePath",newsData.imagePath)
         try {
             if (initialNewsData) {
-                await axios.put(`/api/news/${initialNewsData._id}`, formData, {
+                await axios.put(`/api/news/${initialNewsData.id}`, formData, {
                     headers: {
                         "Authorization": "Bearer " + Cookies.get('token'),
                         "Content-Type": "multipart/form-data",
@@ -143,7 +143,7 @@ const NewsDeleteForm = ({news}) => {
         e.preventDefault();
 
         try {
-            await axios.delete(`/api/news/${news._id}`, {
+            await axios.delete(`/api/news/${news.id}`, {
                 headers: {
                     Authorization: `Bearer ${Cookies.get('token')}`,
                 },

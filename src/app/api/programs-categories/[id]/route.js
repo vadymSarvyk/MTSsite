@@ -11,7 +11,7 @@ export async function PUT(req, { params }) {
         return NextResponse.json({ message: authError.error }, { status: authError.status });
     }
 
-    const { _id } = params;
+    const { id } = params;
     const formData = await req.formData();
     const data = Object.fromEntries(formData);
 
@@ -21,7 +21,7 @@ export async function PUT(req, { params }) {
         const jsonData = await fs.readFile(filePath, 'utf8');
         const categories = JSON.parse(jsonData);
 
-        const categoryIndex = categories.findIndex(cat => cat.id == _id);
+        const categoryIndex = categories.findIndex(cat => cat.id == id);
         if (categoryIndex === -1) {
             return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
         }
@@ -58,12 +58,12 @@ export async function PUT(req, { params }) {
 }
 
 export async function GET(req, { params }) {
-    const { _id } = params;
+    const { id } = params;
 
     try {
         const jsonData = await fs.readFile(filePath, 'utf8');
         const categories = JSON.parse(jsonData);
-        const category = categories.find(cat => cat.id == _id);
+        const category = categories.find(cat => cat.id == id);
 
         if (!category) {
             return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
@@ -82,13 +82,13 @@ export async function DELETE(req, { params }) {
         return NextResponse.json({ message: authError.error }, { status: authError.status });
     }
 
-    const { _id } = params;
+    const { id } = params;
 
     try {
         const jsonData = await fs.readFile(filePath, 'utf8');
         let categories = JSON.parse(jsonData);
 
-        const categoryIndex = categories.findIndex(cat => cat.id == _id);
+        const categoryIndex = categories.findIndex(cat => cat.id == id);
         if (categoryIndex === -1) {
             return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
         }

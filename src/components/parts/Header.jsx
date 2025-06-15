@@ -1,12 +1,25 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import '@/styles/Header.css'
 
 const Header = () => {
+
+    const [banner, setBanner] = useState('/images/people.jpg');
+
+    useEffect(() => {
+        fetch('/api/banner')
+            .then(res => res.json())
+            .then(data => {
+                if (data.bannerImage) {
+                    setBanner(`/images/${data.bannerImage}`);
+                }
+            });
+    }, []);
+
     return (
         <div id="main" className="header">
             <div className="header-background">
-                <img src="/images/people.jpg" alt="#" />
+                <img src={banner} alt="#" />
             </div>
             <div className="header-content">
                 <div className="header-light-zone">

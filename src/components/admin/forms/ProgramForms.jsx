@@ -8,7 +8,7 @@ const ProgramForm = (props) => {
     const [categories, setCategories] = useState([]) 
     const [image, setImage] = useState(null) 
     const [formData, setFormData] = useState({
-        categoryId: category._id,
+        categoryId: category.id,
         name: data?.name ?? '',
         description: data?.description ?? '',
         type: data?.type ?? '',
@@ -55,7 +55,7 @@ const ProgramForm = (props) => {
         e.preventDefault() 
 
         const dataF = new FormData()
-        dataF.append('categoryId', category._id)
+        dataF.append('categoryId', category.id)
         dataF.append('name', formData.name)
         dataF.append('description', formData.description)
         dataF.append('type', formData.type)
@@ -67,7 +67,7 @@ const ProgramForm = (props) => {
         dataF.append('imagePath', formData.imagePath)
 
         if (!data) {
-            if (category._id !== formData.categoryId)
+            if (category.id !== formData.categoryId)
                 dataF.set('categoryId', formData.categoryId)
             try {
                 const response = await axios.post('/api/programs-categories/programs', dataF, {
@@ -81,10 +81,10 @@ const ProgramForm = (props) => {
                 console.error('Error:', error) 
             }
         } else {
-            if (category._id !== formData.categoryId)
+            if (category.id !== formData.categoryId)
                 dataF.append('newCategoryId', formData.categoryId)
             try {
-                const response = await axios.put(`/api/programs-categories/programs/${data._id}`, dataF, {
+                const response = await axios.put(`/api/programs-categories/programs/${data.id}`, dataF, {
                     headers: {
                         "Authorization": "Bearer " + Cookies.get('token'),
                         "Content-Type": "multipart/form-data",
@@ -127,7 +127,7 @@ const ProgramForm = (props) => {
                     <label htmlFor="categoryId">Категорія</label>
                     <select name="categoryId" id="categoryId" onChange={handleInputChange} value={formData.categoryId}>
                         {categories.map((category) => (
-                            <option key={category._id} value={category._id}>
+                            <option key={category.id} value={category.id}>
                                 {category.categoryName}
                             </option>
                         ))}
@@ -214,7 +214,7 @@ const ProgramDeleteForm = (props) => {
         e.preventDefault() 
 
         try {
-            const response = await axios.delete(`/api/programs-categories/programs/${program._id}`, {
+            const response = await axios.delete(`/api/programs-categories/programs/${program.id}`, {
                 data: {
                     categoryId: categoryId,
                 },
@@ -359,7 +359,7 @@ const ProgramCategoryDeleteForm = (props) => {
         e.preventDefault() 
 
         try {
-            const response = await axios.delete(`/api/programs-categories/${props.category._id}`, {
+            const response = await axios.delete(`/api/programs-categories/${props.category.id}`, {
                 headers: {
                     Authorization: `Bearer ${Cookies.get('token')}`,
                 },

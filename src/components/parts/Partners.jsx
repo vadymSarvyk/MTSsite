@@ -23,7 +23,7 @@ const Partners = () => {
                 {partners.map((partner) => (
                     <div key={partner.id} className="partner-item">
                         <a href={partner.url} target="_blank" rel="noopener noreferrer">
-                            <img src={"/images/"+partner.imagePath} alt={`Partner ${partner._id}`} />
+                            <img src={"/images/"+partner.imagePath} alt={`Partner ${partner.id}`} />
                         </a>
                     </div>
                 ))}

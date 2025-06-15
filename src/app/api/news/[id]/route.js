@@ -12,7 +12,7 @@ export async function PUT(req, { params }) {
         return NextResponse.json({ message: authError.error }, { status: authError.status });
     }
 
-    const { _id } = params;
+    const { id } = params;
     const formData = await req.formData();
     const data = {};
     formData.forEach((value, key) => {
@@ -24,7 +24,7 @@ export async function PUT(req, { params }) {
     try {
         const fileData = await fs.readFile(dataFilePath, 'utf-8');
         const newsArray = JSON.parse(fileData);
-        const newsIndex = newsArray.findIndex(n => n.id.toString() === _id);
+        const newsIndex = newsArray.findIndex(n => n.id.toString() === id);
 
         if (newsIndex === -1) {
             return NextResponse.json({ message: 'News not found' }, { status: 404 });
@@ -66,12 +66,12 @@ export async function PUT(req, { params }) {
 }
 
 export async function GET(req, { params }) {
-    const { _id } = params;
+    const { id } = params;
 
     try {
         const fileData = await fs.readFile(dataFilePath, 'utf-8');
         const newsArray = JSON.parse(fileData);
-        const newsItem = newsArray.find(n => n.id.toString() === _id);
+        const newsItem = newsArray.find(n => n.id.toString() === id);
 
         if (!newsItem) {
             return NextResponse.json({ message: 'News not found' }, { status: 404 });
@@ -85,7 +85,7 @@ export async function GET(req, { params }) {
 }
 
 export async function DELETE(req, { params }) {
-    const { _id } = params;
+    const { id } = params;
     const authError = authenticate(req);
     if (authError) {
         return NextResponse.json({ message: authError.error }, { status: authError.status });
@@ -94,7 +94,7 @@ export async function DELETE(req, { params }) {
     try {
         const fileData = await fs.readFile(dataFilePath, 'utf-8');
         const newsArray = JSON.parse(fileData);
-        const newsIndex = newsArray.findIndex(n => n.id.toString() === _id);
+        const newsIndex = newsArray.findIndex(n => n.id.toString() === id);
 
         if (newsIndex === -1) {
             return NextResponse.json({ message: 'News not found' }, { status: 404 });

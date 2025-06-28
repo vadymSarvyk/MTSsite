@@ -1,62 +1,58 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { NextResponse } from 'next/server';
-import { authenticate } from '@/app/api/check-auth/authenticate';
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { authenticate } from '@/app/api/check-auth/authenticate'
 
-const dataFilePath = path.join(process.cwd(), 'src', 'db', 'partners.json');
-const imageDir = path.join(process.cwd(), 'public', 'images');
+export async function GET() {
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-export async function GET(req) {
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const partners = JSON.parse(fileData);
-        return NextResponse.json(partners, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error fetching partners!' }, { status: 400 });
+    const { data, error } = await supabase
+        .from('partners')
+        .select('*')
+        .order('id', { ascending: true })
+
+    if (error) {
+        return Response.json({ message: 'Error fetching partners!', error: error.message }, { status: 400 })
     }
+    return Response.json(data, { status: 200 })
 }
 
 export async function POST(req) {
-    const authError = authenticate(req);
+    const authError = authenticate(req)
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status })
     }
 
-    try {
-        const formData = await req.formData();
-        const data = {};
-        formData.forEach((value, key) => {
-            data[key] = value;
-        });
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-        const { url } = data;
-        const image = formData.get("image");
-        let imagePath = '';
+    const formData = await req.formData()
+    const url = formData.get('url') || ''
+    let image_path = null
 
-        if (image !== 'null' && image !== null) {
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = "image-" + Date.now() + "." + image.name.split('.').pop();
-            await fs.writeFile(path.join(imageDir, imageName), buffer);
-            imagePath = imageName;
+    const image = formData.get('image')
+    if (image && image.size > 0) {
+        const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`
+        const buffer = Buffer.from(await image.arrayBuffer())
+        const { error: uploadError } = await supabase
+            .storage
+            .from('partners-images')
+            .upload(fileName, buffer, { contentType: image.type })
+        if (uploadError) {
+            return Response.json({ message: uploadError.message }, { status: 500 })
         }
-
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const partners = JSON.parse(fileData);
-
-        const newPartner = {
-            id: Date.now(),
-            url,
-            imagePath
-        };
-
-        partners.push(newPartner);
-        await fs.writeFile(dataFilePath, JSON.stringify(partners, null, 2), 'utf-8');
-
-        return NextResponse.json(newPartner, { status: 201 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error creating partner!' }, { status: 400 });
+        image_path = fileName
     }
+
+    const { data, error } = await supabase
+        .from('partners')
+        .insert({ url, image_path })
+        .select()
+        .single()
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 })
+    }
+
+    return Response.json(data, { status: 201 })
 }

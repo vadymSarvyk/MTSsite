@@ -3,15 +3,14 @@ import React, { useEffect, useState } from 'react';
 import '@/styles/Header.css'
 
 const Header = () => {
-
     const [banner, setBanner] = useState('/images/people.jpg');
 
     useEffect(() => {
         fetch('/api/banner')
             .then(res => res.json())
             .then(data => {
-                if (data.bannerImage) {
-                    setBanner(`/images/${data.bannerImage}`);
+                if (data.bannerUrl) {
+                    setBanner(data.bannerUrl);
                 }
             });
     }, []);

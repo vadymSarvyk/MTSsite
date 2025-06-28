@@ -15,64 +15,78 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import { PartnerForm, PartnerDeleteForm } from '../forms/PartnerForms';
+import { createClient } from '@/utils/supabase/client'
 import '@/styles/Table.css'
 
-const PartnerRow = ({data}) => {
+const SUPABASE_PARTNERS_BUCKET = 'partners-images'
+const PLACEHOLDER = '/placeholder.png'
 
+function PartnerImage({ image_path }) {
+  const [imgUrl, setImgUrl] = React.useState(PLACEHOLDER)
+
+  React.useEffect(() => {
+    if (image_path) {
+      const supabase = createClient()
+      const { data } = supabase
+        .storage
+        .from(SUPABASE_PARTNERS_BUCKET)
+        .getPublicUrl(image_path)
+      if (data?.publicUrl) setImgUrl(data.publicUrl)
+      else setImgUrl(PLACEHOLDER)
+    } else {
+      setImgUrl(PLACEHOLDER)
+    }
+  }, [image_path])
+
+  return (
+    <img src={imgUrl} style={{ height: "100px", objectFit: "contain" }} alt="" onError={e => e.target.src = PLACEHOLDER} />
+  )
+}
+
+const PartnerRow = ({ data }) => {
   const [isModalEditPartnerOpen, setIsModalEditPartnerOpen] = React.useState(false)
   const [isModalDeletePartnerOpen, setIsModalDeletePartnerOpen] = React.useState(false)
 
-  const openModalEditPartner = () => {
-    setIsModalEditPartnerOpen(true)
-  }
-
-  const closeModalEditPartner = () => {
-    setIsModalEditPartnerOpen(false)
-  }
-
-  const openModalDeletePartner = () => {
-    setIsModalDeletePartnerOpen(true)
-  }
-
-  const closeModalDeletePartner = () => {
-    setIsModalDeletePartnerOpen(false)
-  }
+  const openModalEditPartner = () => setIsModalEditPartnerOpen(true)
+  const closeModalEditPartner = () => setIsModalEditPartnerOpen(false)
+  const openModalDeletePartner = () => setIsModalDeletePartnerOpen(true)
+  const closeModalDeletePartner = () => setIsModalDeletePartnerOpen(false)
 
   return (
     <React.Fragment>
       {isModalEditPartnerOpen && (
-          <Dialog open={isModalEditPartnerOpen} onClose={closeModalEditPartner}>
-              <DialogTitle>Оновити партнера</DialogTitle>
-              <DialogContent>
-                  <PartnerForm initialData={data} />
-              </DialogContent>
-              <DialogActions>
-                  <Button onClick={closeModalEditPartner}>Закрити</Button>
-              </DialogActions>
-          </Dialog>
+        <Dialog open={isModalEditPartnerOpen} onClose={closeModalEditPartner}>
+          <DialogTitle>Оновити партнера</DialogTitle>
+          <DialogContent>
+            <PartnerForm initialData={data} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeModalEditPartner}>Закрити</Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       {isModalDeletePartnerOpen && (
         <Dialog open={isModalDeletePartnerOpen} onClose={closeModalDeletePartner}>
-            <DialogTitle>Видалити партнера</DialogTitle>
-            <DialogContent>
-                <PartnerDeleteForm partner={data} />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={closeModalDeletePartner}>Закрити</Button>
-            </DialogActions>
+          <DialogTitle>Видалити партнера</DialogTitle>
+          <DialogContent>
+            <PartnerDeleteForm partner={data} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeModalDeletePartner}>Закрити</Button>
+          </DialogActions>
         </Dialog>
       )}
 
       <TableRow
-        key={data.url}
+        key={data.id}
         sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
       >
         <TableCell component="th" scope="row">
           {data.url}
         </TableCell>
         <TableCell>
-        <img src={"/images/" + data.imagePath} style={{height: "100px"}} alt="" />    
+          <PartnerImage image_path={data.image_path} />
         </TableCell>
         <TableCell align="right">
           <button className='table-button-events' onClick={openModalEditPartner}><EditIcon /></button>
@@ -83,29 +97,23 @@ const PartnerRow = ({data}) => {
   )
 }
 
-export default function PartnerTable(props) {
-  const {rows} = props
+export default function PartnerTable({ rows }) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  const openModal = () => {
-      setIsModalOpen(true)
-  }
-
-  const closeModal = () => {
-      setIsModalOpen(false)
-  }
+  const openModal = () => setIsModalOpen(true)
+  const closeModal = () => setIsModalOpen(false)
   return (
     <React.Fragment>
       {isModalOpen && (
-          <Dialog open={isModalOpen} onClose={closeModal}>
-              <DialogTitle>Додати партнера</DialogTitle>
-              <DialogContent>
-                  <PartnerForm />
-              </DialogContent>
-              <DialogActions>
-                  <Button onClick={closeModal}>Закрити</Button>
-              </DialogActions>
-          </Dialog>
+        <Dialog open={isModalOpen} onClose={closeModal}>
+          <DialogTitle>Додати партнера</DialogTitle>
+          <DialogContent>
+            <PartnerForm />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeModal}>Закрити</Button>
+          </DialogActions>
+        </Dialog>
       )}
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
@@ -118,7 +126,7 @@ export default function PartnerTable(props) {
           </TableHead>
           <TableBody>
             {rows.map((row) => (
-              <PartnerRow data={row} />
+              <PartnerRow key={row.id} data={row} />
             ))}
             <TableCell><button onClick={openModal}><AddIcon /></button></TableCell>
           </TableBody>

@@ -1,148 +1,105 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 import { authenticate } from '@/app/api/check-auth/authenticate';
-
-const jsonFilePath = path.resolve(process.cwd(), 'src', 'db', 'programs.json');
-const imagesDir = path.resolve(process.cwd(), 'public', 'images');
-
-// Helper to read/write categories
-async function readCategories() {
-    const data = await fs.readFile(jsonFilePath, 'utf8');
-    return JSON.parse(data);
-}
-
-async function writeCategories(categories) {
-    await fs.writeFile(jsonFilePath, JSON.stringify(categories, null, 2));
-}
+import { cookies } from 'next/headers';
 
 export async function PUT(req, { params }) {
     const authError = authenticate(req);
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status });
     }
 
     const { id } = params;
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+
     const formData = await req.formData();
-    const data = Object.fromEntries(formData);
+    const category_id = Number(formData.get('categoryId'));
+    const name = formData.get('name');
+    const description = formData.get('description');
+    const type = formData.get('type');
+    const number_of_lessons = formData.get('numberOfLessons');
+    const lesson_duration = formData.get('lessonDuration');
+    const course_duration = formData.get('courseDuration');
+    const course_price = formData.get('coursePrice');
+    let image_path = undefined;
 
-    let { categoryId, newCategoryId, name, description, type, numberOfLessons, lessonDuration, courseDuration, coursePrice } = data;
+    // Получаем старую программу (для удаления картинки)
+    const { data: oldProgram } = await supabase
+        .from('programs')
+        .select('image_path')
+        .eq('id', id)
+        .single();
 
-    try {
-        // Load categories
-        const categories = await readCategories();
-
-        // Найти старую категорию
-        const oldCategoryIndex = categories.findIndex(cat => String(cat.id) === String(categoryId));
-        if (oldCategoryIndex === -1) {
-            return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
+    const image = formData.get('image');
+    if (image && image.size > 0) {
+        // Удалить старое изображение
+        if (oldProgram?.image_path) {
+            await supabase.storage.from('programs-images').remove([oldProgram.image_path]);
         }
-        const oldCategory = categories[oldCategoryIndex];
-
-        // Найти программу в старой категории
-        const programIndex = oldCategory.programs.findIndex(program => String(program.id) === String(id));
-        if (programIndex === -1) {
-            return NextResponse.json({ message: 'Program not found!' }, { status: 404 });
+        // Загрузить новое
+        const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`;
+        const buffer = Buffer.from(await image.arrayBuffer());
+        const { error: uploadError } = await supabase
+            .storage
+            .from('programs-images')
+            .upload(fileName, buffer, { contentType: image.type });
+        if (uploadError) {
+            return Response.json({ message: uploadError.message }, { status: 500 });
         }
-        let program = oldCategory.programs[programIndex];
-
-        // Обработка картинки
-        let imagePath = program.imagePath;
-        const uploadedImage = formData.get("image");
-        if (uploadedImage && uploadedImage.size > 0) {
-            // Удаляем старую картинку, если была
-            if (imagePath) {
-                try {
-                    await fs.unlink(path.resolve(imagesDir, imagePath));
-                } catch (e) {
-                    // не критично, если файл не найден
-                }
-            }
-            // Сохраняем новую
-            const arrayBuffer = await uploadedImage.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = `image-${Date.now()}.${uploadedImage.name.split('.').pop()}`;
-            await fs.writeFile(path.resolve(imagesDir, imageName), buffer);
-            imagePath = imageName;
-        }
-
-        // Обновлённая программа
-        const updatedProgram = {
-            ...program,
-            name,
-            description,
-            type,
-            numberOfLessons: numberOfLessons || "",
-            lessonDuration: lessonDuration || "",
-            courseDuration: courseDuration || "",
-            coursePrice: coursePrice || "",
-            imagePath
-        };
-
-        // Перемещение в другую категорию, если надо
-        if (newCategoryId && newCategoryId !== categoryId) {
-            // Найти новую категорию
-            const newCategoryIndex = categories.findIndex(cat => String(cat.id) === String(newCategoryId));
-            if (newCategoryIndex === -1) {
-                return NextResponse.json({ message: 'New category not found!' }, { status: 404 });
-            }
-            // Удалить из старой
-            oldCategory.programs.splice(programIndex, 1);
-            // Добавить в новую
-            categories[newCategoryIndex].programs.push(updatedProgram);
-        } else {
-            // Просто обновить программу
-            oldCategory.programs[programIndex] = updatedProgram;
-        }
-
-        // Сохранить файл
-        await writeCategories(categories);
-
-        return NextResponse.json(updatedProgram, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error updating program!' }, { status: 400 });
+        image_path = fileName;
     }
-}
 
+    const updateFields = {
+        category_id,
+        name,
+        description,
+        type,
+        number_of_lessons,
+        lesson_duration,
+        course_duration,
+        course_price,
+    };
+    if (image_path !== undefined) updateFields.image_path = image_path;
+
+    const { data, error } = await supabase
+        .from('programs')
+        .update(updateFields)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 });
+    }
+
+    return Response.json(data, { status: 200 });
+}
 export async function DELETE(req, { params }) {
     const authError = authenticate(req);
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status });
     }
 
     const { id } = params;
-    const formData = await req.formData();
-    const { categoryId } = Object.fromEntries(formData);
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-    try {
-        const categories = await readCategories();
-        const categoryIndex = categories.findIndex(cat => String(cat.id) === String(categoryId));
-        if (categoryIndex === -1) {
-            return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
-        }
-        const category = categories[categoryIndex];
-        const programIndex = category.programs.findIndex(program => String(program.id) === String(id));
-        if (programIndex === -1) {
-            return NextResponse.json({ message: 'Program not found!' }, { status: 404 });
-        }
+    // Получаем программу (для удаления картинки)
+    const { data: program } = await supabase
+        .from('programs')
+        .select('image_path')
+        .eq('id', id)
+        .single();
 
-        const [deletedProgram] = category.programs.splice(programIndex, 1);
-
-        // Удалить картинку, если есть
-        if (deletedProgram.imagePath) {
-            try {
-                await fs.unlink(path.resolve(imagesDir, deletedProgram.imagePath));
-            } catch (e) {
-                // не критично
-            }
-        }
-
-        await writeCategories(categories);
-
-        return NextResponse.json({ message: 'Program successfully deleted!' }, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error deleting program!' }, { status: 400 });
+    if (program?.image_path) {
+        await supabase.storage.from('programs-images').remove([program.image_path]);
     }
+
+    const { error } = await supabase.from('programs').delete().eq('id', id);
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 });
+    }
+
+    return Response.json({ message: 'Program successfully deleted!' }, { status: 200 });
 }

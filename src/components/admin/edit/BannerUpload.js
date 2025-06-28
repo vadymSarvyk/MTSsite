@@ -12,8 +12,8 @@ export default function BannerUpload() {
         fetch("/api/banner")
             .then(res => res.json())
             .then(data => {
-                if (data.bannerImage) {
-                    setPreview(`/images/${data.bannerImage}`);
+                if (data.bannerUrl) {
+                    setPreview(data.bannerUrl);
                 }
             });
     }, []);
@@ -41,12 +41,11 @@ export default function BannerUpload() {
             const res = await axios.post("/api/banner", formData, {
                 headers: {
                     "Authorization": `Bearer ${Cookies.get("token")}`,
-                    // Axios сам поставит content-type: multipart/form-data с boundary
                 },
             });
             setStatus("Банер оновлено!");
-            if (res.data.bannerImage) {
-                setPreview(`/images/${res.data.bannerImage}?t=${Date.now()}`);
+            if (res.data.bannerUrl) {
+                setPreview(res.data.bannerUrl + `?t=${Date.now()}`);
             }
         } catch (error) {
             setStatus("Помилка при завантаженні.");

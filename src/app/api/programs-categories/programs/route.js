@@ -1,84 +1,60 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 import { authenticate } from '@/app/api/check-auth/authenticate';
-
-const jsonFilePath = path.resolve(process.cwd(), 'src', 'db', 'programs.json');
-const imagesDir = path.resolve(process.cwd(), 'public', 'images');
-
-// Helper functions
-async function readCategories() {
-    const data = await fs.readFile(jsonFilePath, 'utf8');
-    return JSON.parse(data);
-}
-
-async function writeCategories(categories) {
-    await fs.writeFile(jsonFilePath, JSON.stringify(categories, null, 2));
-}
+import { cookies } from 'next/headers';
 
 export async function POST(req) {
     const authError = authenticate(req);
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status });
     }
 
-    try {
-        const formData = await req.formData();
-        const data = {};
-        formData.forEach((value, key) => {
-            data[key] = value;
-        });
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-        const { categoryId, name, description, type, numberOfLessons, lessonDuration, courseDuration, coursePrice } = data;
+    const formData = await req.formData();
+    const category_id = Number(formData.get('categoryId'));
+    const name = formData.get('name');
+    const description = formData.get('description');
+    const type = formData.get('type');
+    const number_of_lessons = formData.get('numberOfLessons');
+    const lesson_duration = formData.get('lessonDuration');
+    const course_duration = formData.get('courseDuration');
+    const course_price = formData.get('coursePrice');
+    let image_path = null;
 
-        // Загружаем категории
-        const categories = await readCategories();
-
-        // Ищем нужную категорию
-        const categoryIndex = categories.findIndex(cat => String(cat.id) === String(categoryId));
-        if (categoryIndex === -1) {
-            return NextResponse.json({ message: 'Category not found!' }, { status: 404 });
+    const image = formData.get('image');
+    if (image && image.size > 0) {
+        const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`;
+        const buffer = Buffer.from(await image.arrayBuffer());
+        const { error: uploadError } = await supabase
+            .storage
+            .from('programs-images')
+            .upload(fileName, buffer, { contentType: image.type });
+        if (uploadError) {
+            return Response.json({ message: uploadError.message }, { status: 500 });
         }
-        const category = categories[categoryIndex];
+        image_path = fileName;
+    }
 
-        // Обработка изображения
-        let imagePath = '';
-        const image = formData.get("image");
-        if (image && image.size > 0) {
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = "image-" + Date.now() + "." + image.name.split('.').pop();
-            await fs.writeFile(path.resolve(imagesDir, imageName), buffer);
-            imagePath = imageName;
-        }
-
-        // Генерируем id для программы (например, по времени)
-        const newProgramId = Date.now();
-
-        // Создаем новую программу
-        const newProgram = {
-            id: newProgramId,
+    const { data, error } = await supabase
+        .from('programs')
+        .insert({
+            category_id,
             name,
             description,
             type,
-            numberOfLessons,
-            lessonDuration,
-            courseDuration,
-            coursePrice,
-            imagePath
-        };
+            number_of_lessons,
+            lesson_duration,
+            course_duration,
+            course_price,
+            image_path,
+        })
+        .select()
+        .single();
 
-        // Добавляем в категорию
-        category.programs = category.programs || [];
-        category.programs.push(newProgram);
-
-        // Сохраняем изменения
-        categories[categoryIndex] = category;
-        await writeCategories(categories);
-
-        return NextResponse.json(newProgram, { status: 201 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error creating program!' }, { status: 400 });
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 });
     }
+
+    return Response.json(data, { status: 201 });
 }

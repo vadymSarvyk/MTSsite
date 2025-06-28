@@ -1,103 +1,106 @@
 import React, { useState, useEffect } from 'react'
 import "@/styles/Forms.css"
-import axios from 'axios' 
-import Cookies from 'js-cookie';
+import axios from 'axios'
+import Cookies from 'js-cookie'
+import { createClient } from '@/utils/supabase/client'
 
+const SUPABASE_PROGRAMS_BUCKET = 'programs-images'
+
+// ---------- ФОРМА ПРОГРАММЫ ----------
 const ProgramForm = (props) => {
     const { category, data } = props
-    const [categories, setCategories] = useState([]) 
-    const [image, setImage] = useState(null) 
+    const [categories, setCategories] = useState([])
+    const [image, setImage] = useState(null)
     const [formData, setFormData] = useState({
-        categoryId: category.id,
+        category_id: category.id,
         name: data?.name ?? '',
         description: data?.description ?? '',
         type: data?.type ?? '',
-        numberOfLessons: data?.numberOfLessons ?? '',
-        lessonDuration: data?.lessonDuration ?? '',
-        courseDuration: data?.courseDuration ?? '',
-        coursePrice: data?.coursePrice ?? '',
-        imagePath: data?.imagePath ?? ''
+        number_of_lessons: data?.number_of_lessons ?? '',
+        lesson_duration: data?.lesson_duration ?? '',
+        course_duration: data?.course_duration ?? '',
+        course_price: data?.course_price ?? '',
+        image_path: data?.image_path ?? ''
     })
 
-    const [imagePreview, setImagePreview] = useState("/images/" + formData.imagePath) 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0] 
+    const [imagePreview, setImagePreview] = useState('/placeholder.png')
 
-        if (file) {
-            const reader = new FileReader() 
-            reader.onloadend = () => {
-                setImagePreview(reader.result)
-            } 
-            reader.readAsDataURL(file) 
+    // Динамически получаем ссылку из Supabase Storage по image_path
+    useEffect(() => {
+        async function fetchImage() {
+            if (formData.image_path) {
+                const supabase = createClient()
+                const { data } = supabase
+                    .storage
+                    .from(SUPABASE_PROGRAMS_BUCKET)
+                    .getPublicUrl(formData.image_path)
+                if (data?.publicUrl) {
+                    setImagePreview(data.publicUrl)
+                } else {
+                    setImagePreview('/placeholder.png')
+                }
+            } else {
+                setImagePreview('/placeholder.png')
+            }
         }
-        
-        setImage(file) 
-    }
+        fetchImage()
+    }, [formData.image_path])
 
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await axios.get('/api/programs-categories') 
-                setCategories(response.data) 
+                const response = await axios.get('/api/programs-categories')
+                setCategories(response.data)
             } catch (error) {
-                console.error('Error:', error) 
+                console.error('Error:', error)
             }
-        } 
-
-        fetchCategories() 
-    }, [data]) 
+        }
+        fetchCategories()
+    }, [])
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault() 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => setImagePreview(reader.result)
+            reader.readAsDataURL(file)
+            setImage(file)
+        }
+    }
 
+    const handleSubmit = async (e) => {
+        e.preventDefault()
         const dataF = new FormData()
-        dataF.append('categoryId', category.id)
+        dataF.append('categoryId', formData.category_id)
         dataF.append('name', formData.name)
         dataF.append('description', formData.description)
         dataF.append('type', formData.type)
-        dataF.append('numberOfLessons', formData.numberOfLessons)
-        dataF.append('lessonDuration', formData.lessonDuration)
-        dataF.append('courseDuration', formData.courseDuration)
-        dataF.append('coursePrice', formData.coursePrice)
+        dataF.append('numberOfLessons', formData.number_of_lessons)
+        dataF.append('lessonDuration', formData.lesson_duration)
+        dataF.append('courseDuration', formData.course_duration)
+        dataF.append('coursePrice', formData.course_price)
         dataF.append('image', image)
-        dataF.append('imagePath', formData.imagePath)
+        dataF.append('imagePath', formData.image_path)
 
-        if (!data) {
-            if (category.id !== formData.categoryId)
-                dataF.set('categoryId', formData.categoryId)
-            try {
-                const response = await axios.post('/api/programs-categories/programs', dataF, {
-                    headers: {
-                        "Authorization": "Bearer " + Cookies.get('token'),
-                        "Content-Type": "multipart/form-data",
-                    }
-                }) 
-                window.location.reload()
-            } catch (error) {
-                console.error('Error:', error) 
+        try {
+            const headers = {
+                "Authorization": "Bearer " + Cookies.get('token'),
+                "Content-Type": "multipart/form-data",
             }
-        } else {
-            if (category.id !== formData.categoryId)
-                dataF.append('newCategoryId', formData.categoryId)
-            try {
-                const response = await axios.put(`/api/programs-categories/programs/${data.id}`, dataF, {
-                    headers: {
-                        "Authorization": "Bearer " + Cookies.get('token'),
-                        "Content-Type": "multipart/form-data",
-                    }
-                }) 
-                window.location.reload()
-            } catch (error) {
-                console.error('Error:', error) 
+            if (!data) {
+                await axios.post('/api/programs-categories/programs', dataF, { headers })
+            } else {
+                await axios.put(`/api/programs-categories/programs/${data.id}`, dataF, { headers })
             }
+            window.location.reload()
+        } catch (error) {
+            console.error('Error:', error)
         }
-
-
-    } 
+    }
 
     return (
         <div className="form">
@@ -122,71 +125,66 @@ const ProgramForm = (props) => {
                         onChange={handleInputChange}
                     />
                 </div>
-
                 <div className="form-group">
-                    <label htmlFor="categoryId">Категорія</label>
-                    <select name="categoryId" id="categoryId" onChange={handleInputChange} value={formData.categoryId}>
+                    <label htmlFor="category_id">Категорія</label>
+                    <select name="category_id" id="category_id" onChange={handleInputChange} value={formData.category_id}>
                         {categories.map((category) => (
                             <option key={category.id} value={category.id}>
-                                {category.categoryName}
+                                {category.category_name}
                             </option>
                         ))}
                     </select>
                 </div>
-
                 <div className="form-group">
                     <label htmlFor="type">Вид</label>
-                    <select name="type" id="type" onChange={handleInputChange} value={formData.type}>
-                        <option value="">Виберіть вид</option>
-                        <option value="індивідуальне">Індивідуальне</option>
-                        <option value="парне">Парне</option>
-                        <option value="втрьом">Втрьом</option>
-                        <option value="група">Група</option>
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="numberOfLessons">Кількість занять</label>
-                    <select name="numberOfLessons" id="numberOfLessons" onChange={handleInputChange} value={formData.numberOfLessons}>
-                        <option value="">Виберіть кількість занять</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="індивідуально">Індивідуально</option>
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="lessonDuration">Тривалість уроку</label>
-                    <select name="lessonDuration" id="lessonDuration" onChange={handleInputChange} value={formData.lessonDuration}>
-                        <option value="">Виберіть тривалість уроку</option>
-                        <option value="45">45 хв</option>
-                        <option value="60">60 хв</option>
-                        <option value="80">80 хв</option>
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="courseDuration">Тривалість курсу</label>
                     <input
                         type="text"
-                        id="courseDuration"
-                        name="courseDuration"
-                        value={formData.courseDuration}
+                        id="type"
+                        name="type"
+                        value={formData.type}
                         onChange={handleInputChange}
                     />
                 </div>
-
                 <div className="form-group">
-                    <label htmlFor="coursePrice">Вартість курсу</label>
+                    <label htmlFor="number_of_lessons">Кількість занять</label>
                     <input
-                        type="number"
-                        id="coursePrice"
-                        name="coursePrice"
-                        value={formData.coursePrice}
+                        type="text"
+                        id="number_of_lessons"
+                        name="number_of_lessons"
+                        value={formData.number_of_lessons}
                         onChange={handleInputChange}
                     />
                 </div>
-
+                <div className="form-group">
+                    <label htmlFor="lesson_duration">Тривалість уроку</label>
+                    <input
+                        type="text"
+                        id="lesson_duration"
+                        name="lesson_duration"
+                        value={formData.lesson_duration}
+                        onChange={handleInputChange}
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="course_duration">Тривалість курсу</label>
+                    <input
+                        type="text"
+                        id="course_duration"
+                        name="course_duration"
+                        value={formData.course_duration}
+                        onChange={handleInputChange}
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="course_price">Вартість курсу</label>
+                    <input
+                        type="text"
+                        id="course_price"
+                        name="course_price"
+                        value={formData.course_price}
+                        onChange={handleInputChange}
+                    />
+                </div>
                 <div className="form-group">
                     <label htmlFor="image">Зображення</label>
                     <input
@@ -196,44 +194,37 @@ const ProgramForm = (props) => {
                         accept="image/*"
                         onChange={handleImageChange}
                     /><br />
-
                     <img src={imagePreview} style={{ width: "50%" }} alt="Відсутня картинка" />
                 </div>
-
                 <button type="submit">{data ? "Редагувати програму" : "Додати програму"}</button>
             </form>
         </div>
     )
 }
 
+// ---------- УДАЛЕНИЕ ПРОГРАММЫ ----------
 const ProgramDeleteForm = (props) => {
-
     const {categoryId, program} = props
 
     const handleDeleteSubmit = async (e) => {
-        e.preventDefault() 
-
+        e.preventDefault()
         try {
-            const response = await axios.delete(`/api/programs-categories/programs/${program.id}`, {
-                data: {
-                    categoryId: categoryId,
-                },
+            await axios.delete(`/api/programs-categories/programs/${program.id}`, {
+                data: { categoryId: categoryId },
                 headers: {
                     Authorization: `Bearer ${Cookies.get('token')}`,
                     "Content-Type": "multipart/form-data",
                 },
-            }) 
-            console.log(response.data) 
+            })
             window.location.reload()
         } catch (error) {
-            console.error('Error:', error.response.data) 
+            console.error('Error:', error.response?.data)
         }
     }
 
     return (
         <div className="form">
-            <form onSubmit={handleDeleteSubmit}> 
-
+            <form onSubmit={handleDeleteSubmit}>
                 <p style={{ fontFamily: 'sans-serif' }}>Ви впевнені, що хочете видалити <b>{program.name}</b></p>
                 <button className="submit delete" type="submit">Так, видалити</button>
             </form>
@@ -241,16 +232,37 @@ const ProgramDeleteForm = (props) => {
     )
 }
 
+// ---------- ФОРМА КАТЕГОРИИ ----------
 const ProgramCategoryForm = (props) => {
     const {category} = props;
     const [image, setImage] = useState(null);
     const [formData, setFormData] = useState({
-        categoryName: category?.categoryName ?? '',
+        category_name: category?.category_name ?? '',
         description: category?.description ?? '',
-        imagePath: category?.imagePath ?? ''
+        image_path: category?.image_path ?? ''
     })
 
-    const [imagePreview, setImagePreview] = useState("/images/" + formData.imagePath);
+    const [imagePreview, setImagePreview] = useState('/placeholder.png');
+
+    useEffect(() => {
+        async function fetchImage() {
+            if (formData.image_path) {
+                const supabase = createClient()
+                const { data } = supabase
+                    .storage
+                    .from(SUPABASE_PROGRAMS_BUCKET)
+                    .getPublicUrl(formData.image_path)
+                if (data?.publicUrl) {
+                    setImagePreview(data.publicUrl)
+                } else {
+                    setImagePreview('/placeholder.png')
+                }
+            } else {
+                setImagePreview('/placeholder.png')
+            }
+        }
+        fetchImage()
+    }, [formData.image_path])
 
     const handleCategoryInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -265,64 +277,47 @@ const ProgramCategoryForm = (props) => {
                 setImagePreview(reader.result);
             };
             reader.readAsDataURL(file);
+            setImage(file)
         }
-
-        setImage(file);
     };
 
     const handleCategorySubmit = async (e) => {
-        e.preventDefault() 
-
+        e.preventDefault()
         const formDataRes = new FormData()
-        formDataRes.append("categoryName", formData.categoryName)
+        formDataRes.append("categoryName", formData.category_name)
         formDataRes.append("description", formData.description)
-        formDataRes.append("image",image)
-        formDataRes.append("imagePath",formData.imagePath)
+        formDataRes.append("image", image)
+        formDataRes.append("imagePath", formData.image_path)
 
-        if (!props.category) {
-            try {
-                const response = await axios.post('/api/programs-categories', formDataRes, {
-                    headers: {
-                        "Authorization": "Bearer " + Cookies.get('token'),
-                        "Content-Type": "multipart/form-data",
-                    }
-                }) 
-                window.location.reload()
-            } catch (error) {
-                console.error('Error:', error) 
+        try {
+            const headers = {
+                "Authorization": "Bearer " + Cookies.get('token'),
+                "Content-Type": "multipart/form-data",
             }
-        } else {
-            try {
-                console.log(props)
-                const response = await axios.put(`/api/programs-categories/${props.category.id}`, formDataRes, {
-                    headers: {
-                        "Authorization": "Bearer " + Cookies.get('token'),
-                        "Content-Type": "multipart/form-data",
-                    }
-                }) 
-                window.location.reload()
-            } catch (error) {
-                console.error('Error:', error) 
+            if (!props.category) {
+                await axios.post('/api/programs-categories', formDataRes, { headers })
+            } else {
+                await axios.put(`/api/programs-categories/${props.category.id}`, formDataRes, { headers })
             }
+            window.location.reload()
+        } catch (error) {
+            console.error('Error:', error)
         }
-
-
-    } 
+    }
 
     return (
         <div className="form">
             <form onSubmit={handleCategorySubmit}>
                 <div className="form-group">
-                    <label htmlFor="categoryName">Назва категорії</label>
+                    <label htmlFor="category_name">Назва категорії</label>
                     <input
                         type="text"
-                        id="categoryName"
-                        name="categoryName"
-                        value={formData.categoryName}
+                        id="category_name"
+                        name="category_name"
+                        value={formData.category_name}
                         onChange={handleCategoryInputChange}
                     />
                 </div>
-
                 <div className="form-group">
                     <label htmlFor="description">Опис</label>
                     <textarea
@@ -333,7 +328,6 @@ const ProgramCategoryForm = (props) => {
                         onChange={handleCategoryInputChange}
                     />
                 </div>
-
                 <div className="form-group">
                     <label htmlFor="image">Зображення</label>
                     <input
@@ -345,37 +339,34 @@ const ProgramCategoryForm = (props) => {
                     />
                     <img src={imagePreview} style={{width: "50%"}} alt="Відсутня картинка" />
                 </div>
-
                 <button className="submit" type="submit">{props.category ? "Редагувати категорію" : "Додати категорію"}</button>
             </form>
         </div>
     )
 }
 
+// ---------- УДАЛЕНИЕ КАТЕГОРИИ ----------
 const ProgramCategoryDeleteForm = (props) => {
     const { category } = props
 
     const handleDeleteSubmit = async (e) => {
-        e.preventDefault() 
-
+        e.preventDefault()
         try {
-            const response = await axios.delete(`/api/programs-categories/${props.category.id}`, {
+            await axios.delete(`/api/programs-categories/${props.category.id}`, {
                 headers: {
                     Authorization: `Bearer ${Cookies.get('token')}`,
                 },
-            }) 
-            console.log(response.data) 
+            })
             window.location.reload()
         } catch (error) {
-            console.error('Error:', error.response.data) 
+            console.error('Error:', error.response?.data)
         }
-    } 
+    }
 
     return (
         <div className="form">
             <form onSubmit={handleDeleteSubmit}>
-
-                <p style={{ fontFamily: 'sans-serif' }}>Ви впевнені, що хочете видалити <b>{category.categoryName}</b></p>
+                <p style={{ fontFamily: 'sans-serif' }}>Ви впевнені, що хочете видалити <b>{category.category_name}</b></p>
                 <button className="submit delete" type="submit">Так, видалити</button>
             </form>
         </div>

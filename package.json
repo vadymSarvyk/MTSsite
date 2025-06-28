@@ -13,6 +13,8 @@
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.50.0",
     "animate.css": "^4.1.1",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",

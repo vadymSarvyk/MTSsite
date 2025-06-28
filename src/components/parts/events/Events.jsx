@@ -22,7 +22,11 @@ function Events() {
         setExpandedIndex(expandedIndex === index ? null : index);
     };
 
-    const newest = events.slice(-3);
+    console.log(events)
+
+    const newest = events.slice(0, 3);
+
+    console.log(newest)
     return (
         <div id="events" className="events-container">
             <div className="title-container">

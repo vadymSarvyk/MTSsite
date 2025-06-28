@@ -1,71 +1,60 @@
-import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { authenticate } from '@/app/api/check-auth/authenticate';
-const fs = require('fs').promises;
-const path = require('path');
 
-const filePath = path.join(process.cwd(), 'src', 'db', 'news.json');
+export async function GET() {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
-export async function GET(req) {
-    try {
-        const fileData = await fs.readFile(filePath, 'utf-8');
-        const allNews = JSON.parse(fileData);
+  const { data, error } = await supabase
+    .from('news')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-        if (!allNews || allNews.length === 0) {
-            return NextResponse.json({ message: 'No news found' }, { status: 404 });
-        }
-
-        return NextResponse.json(allNews, { status: 200 });
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ message: 'Error fetching news' }, { status: 500 });
-    }
+  if (error) return Response.json({ message: error.message }, { status: 500 });
+  return Response.json(data);
 }
 
 export async function POST(req) {
-    const authError = authenticate(req);
-    if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
-    }
+  const authError = authenticate(req);
+  if (authError) return Response.json({ message: authError.error }, { status: authError.status });
 
-    try {
-        const formData = await req.formData();
-        const data = {};
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const formData = await req.formData();
 
-        formData.forEach((value, key) => {
-            data[key] = value;
-        });
+  const name = formData.get('name');
+  const shortAddress = formData.get('shortAddress');
+  const fullAddress = formData.get('fullAddress');
+  const description = formData.get('description');
+  const image = formData.get('image');
 
-        const { name, shortAddress, fullAddress, description } = data;
+  let imagePath = null;
+  if (image && image.size > 0) {
+    const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`;
+    const buffer = Buffer.from(await image.arrayBuffer());
 
-        const image = formData.get("image");
-        if (image && image.size > 0) {
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = "image-" + Date.now() + "." + image.name.split('.').pop();
-            await fs.writeFile(`./public/images/${imageName}`, buffer);
-            data.imagePath = imageName;
-        } else {
-            data.imagePath = null;
-        }
+    const { error: uploadError } = await supabase
+      .storage
+      .from('news-images')
+      .upload(fileName, buffer, { contentType: image.type });
 
-        const fileData = await fs.readFile(filePath, 'utf-8');
-        const newsArray = JSON.parse(fileData);
+    if (uploadError) return Response.json({ message: uploadError.message }, { status: 500 });
+    imagePath = fileName;
+  }
 
-        const newNews = {
-            id: Date.now(),
-            name,
-            shortAddress,
-            fullAddress,
-            description,
-            imagePath: data.imagePath,
-        };
+  const { data, error } = await supabase
+    .from('news')
+    .insert({
+      name,
+      short_address: shortAddress,
+      full_address: fullAddress,
+      description,
+      image_path: imagePath,
+    })
+    .select()
+    .single();
 
-        newsArray.push(newNews);
-        await fs.writeFile(filePath, JSON.stringify(newsArray, null, 2), 'utf-8');
-
-        return NextResponse.json(newNews, { status: 201 });
-    } catch (error) {
-        console.error('Error creating news:', error);
-        return NextResponse.json({ message: 'Error creating news' }, { status: 400 });
-    }
+  if (error) return Response.json({ message: error.message }, { status: 500 });
+  return Response.json(data, { status: 201 });
 }

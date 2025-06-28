@@ -1,121 +1,93 @@
-import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { authenticate } from '@/app/api/check-auth/authenticate';
-import fs from 'fs/promises';
-import path from 'path';
-
-const dataFilePath = path.join(process.cwd(), 'src', 'db', 'news.json');
-const imageDir = path.join(process.cwd(), 'public', 'images');
-
-export async function PUT(req, { params }) {
-    const authError = authenticate(req);
-    if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
-    }
-
-    const { id } = params;
-    const formData = await req.formData();
-    const data = {};
-    formData.forEach((value, key) => {
-        data[key] = value;
-    });
-
-    const { name, shortAddress, fullAddress, description } = data;
-
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const newsArray = JSON.parse(fileData);
-        const newsIndex = newsArray.findIndex(n => n.id.toString() === id);
-
-        if (newsIndex === -1) {
-            return NextResponse.json({ message: 'News not found' }, { status: 404 });
-        }
-
-        const newsItem = newsArray[newsIndex];
-
-        const image = formData.get("image");
-        if (image && image.size > 0) {
-            if (newsItem.imagePath) {
-                const oldFilePath = path.join(imageDir, newsItem.imagePath);
-                try {
-                    await fs.unlink(oldFilePath);
-                } catch (error) {
-                    console.error('Error deleting file:', error);
-                }
-            }
-
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = "image-" + Date.now() + "." + image.name.split('.').pop();
-            await fs.writeFile(path.join(imageDir, imageName), buffer);
-            newsItem.imagePath = imageName;
-        }
-
-        newsItem.name = name || newsItem.name;
-        newsItem.shortAddress = shortAddress || newsItem.shortAddress;
-        newsItem.fullAddress = fullAddress || newsItem.fullAddress;
-        newsItem.description = description || newsItem.description;
-
-        newsArray[newsIndex] = newsItem;
-        await fs.writeFile(dataFilePath, JSON.stringify(newsArray, null, 2), 'utf-8');
-
-        return NextResponse.json(newsItem, { status: 200 });
-    } catch (error) {
-        console.error('Error updating news:', error);
-        return NextResponse.json({ message: 'Error updating news' }, { status: 400 });
-    }
-}
 
 export async function GET(req, { params }) {
-    const { id } = params;
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const { id } = params;
 
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const newsArray = JSON.parse(fileData);
-        const newsItem = newsArray.find(n => n.id.toString() === id);
+  const { data, error } = await supabase
+    .from('news')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-        if (!newsItem) {
-            return NextResponse.json({ message: 'News not found' }, { status: 404 });
-        }
+  if (error) return Response.json({ message: 'News not found' }, { status: 404 });
+  return Response.json(data);
+}
 
-        return NextResponse.json(newsItem, { status: 200 });
-    } catch (error) {
-        console.error('Error fetching news by ID:', error);
-        return NextResponse.json({ message: 'Error fetching news by ID' }, { status: 400 });
+export async function PUT(req, { params }) {
+  const authError = authenticate(req);
+  if (authError) return Response.json({ message: authError.error }, { status: authError.status });
+
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const { id } = params;
+  const formData = await req.formData();
+
+  const fields = {
+    name: formData.get('name'),
+    short_address: formData.get('shortAddress'),
+    full_address: formData.get('fullAddress'),
+    description: formData.get('description'),
+  };
+
+  const image = formData.get('image');
+  if (image && image.size > 0) {
+    const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`;
+    const buffer = Buffer.from(await image.arrayBuffer());
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from('news-images')
+      .upload(fileName, buffer, { contentType: image.type });
+
+    if (uploadError) return Response.json({ message: uploadError.message }, { status: 500 });
+    fields.image_path = fileName;
+
+    const { data: old } = await supabase
+      .from('news')
+      .select('image_path')
+      .eq('id', id)
+      .single();
+
+    if (old?.image_path) {
+      await supabase.storage.from('news-images').remove([old.image_path]);
     }
+  }
+
+  const { data, error } = await supabase
+    .from('news')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return Response.json({ message: error.message }, { status: 500 });
+  return Response.json(data);
 }
 
 export async function DELETE(req, { params }) {
-    const { id } = params;
-    const authError = authenticate(req);
-    if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
-    }
+  const authError = authenticate(req);
+  if (authError) return Response.json({ message: authError.error }, { status: authError.status });
 
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const newsArray = JSON.parse(fileData);
-        const newsIndex = newsArray.findIndex(n => n.id.toString() === id);
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const { id } = params;
 
-        if (newsIndex === -1) {
-            return NextResponse.json({ message: 'News not found' }, { status: 404 });
-        }
+  const { data: old } = await supabase
+    .from('news')
+    .select('image_path')
+    .eq('id', id)
+    .single();
 
-        const [deletedItem] = newsArray.splice(newsIndex, 1);
+  if (old?.image_path) {
+    await supabase.storage.from('news-images').remove([old.image_path]);
+  }
 
-        if (deletedItem.imagePath) {
-            const imagePathToDelete = path.join(imageDir, deletedItem.imagePath);
-            try {
-                await fs.unlink(imagePathToDelete);
-            } catch (error) {
-                console.error('Error deleting file:', error);
-            }
-        }
+  const { error } = await supabase.from('news').delete().eq('id', id);
 
-        await fs.writeFile(dataFilePath, JSON.stringify(newsArray, null, 2), 'utf-8');
-
-        return NextResponse.json({ message: 'News deleted successfully' }, { status: 200 });
-    } catch (error) {
-        console.error('Error deleting news:', error);
-        return NextResponse.json({ message: 'Error deleting news' }, { status: 400 });
-    }
+  if (error) return Response.json({ message: error.message }, { status: 500 });
+  return Response.json({ message: 'News deleted successfully' });
 }

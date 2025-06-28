@@ -1,112 +1,106 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { NextResponse } from 'next/server';
-import { authenticate } from '@/app/api/check-auth/authenticate';
-
-const dataFilePath = path.join(process.cwd(), 'src', 'db', 'partners.json');
-const imageDir = path.join(process.cwd(), 'public', 'images');
-
-export async function PUT(req, { params }) {
-    const authError = authenticate(req);
-    if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
-    }
-
-    const { id } = params;
-    const formData = await req.formData();
-    const data = {};
-    formData.forEach((value, key) => {
-        data[key] = value;
-    });
-
-    const { url } = data;
-
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const partners = JSON.parse(fileData);
-
-        const index = partners.findIndex(p => p.id.toString() === id);
-        if (index === -1) {
-            return NextResponse.json({ message: 'Partner not found!' }, { status: 404 });
-        }
-
-        if (formData.get("image") !== 'null' && formData.get("image") !== null) {
-            const oldImagePath = partners[index].imagePath;
-            const oldFilePath = path.join(imageDir, oldImagePath);
-            try {
-                await fs.unlink(oldFilePath);
-            } catch (error) {
-                console.error('Error deleting file:', error);
-            }
-
-            const image = formData.get("image");
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = "image-" + Date.now() + "." + image.name.split('.').pop();
-            await fs.writeFile(path.join(imageDir, imageName), buffer);
-            partners[index].imagePath = imageName;
-        }
-
-        partners[index].url = url;
-
-        await fs.writeFile(dataFilePath, JSON.stringify(partners, null, 2), 'utf-8');
-        return NextResponse.json(partners[index], { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error updating partner!' }, { status: 400 });
-    }
-}
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { authenticate } from '@/app/api/check-auth/authenticate'
 
 export async function GET(req, { params }) {
-    const { id } = params;
+    const { id } = params
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const partners = JSON.parse(fileData);
-        const partner = partners.find(p => p.id.toString() === id);
+    const { data, error } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('id', id)
+        .single()
 
-        if (!partner) {
-            return NextResponse.json({ message: 'Partner not found!' }, { status: 404 });
-        }
-
-        return NextResponse.json(partner, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error fetching partner by ID!' }, { status: 400 });
+    if (error || !data) {
+        return Response.json({ message: 'Partner not found!' }, { status: 404 })
     }
+
+    return Response.json(data, { status: 200 })
+}
+
+export async function PUT(req, { params }) {
+    const authError = authenticate(req)
+    if (authError) {
+        return Response.json({ message: authError.error }, { status: authError.status })
+    }
+
+    const { id } = params
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
+
+    const formData = await req.formData()
+    const url = formData.get('url') || ''
+
+    // Получаем старый image_path (если нужно удалить картинку)
+    const { data: oldPartner } = await supabase
+        .from('partners')
+        .select('image_path')
+        .eq('id', id)
+        .single()
+
+    let image_path = oldPartner?.image_path
+
+    const image = formData.get('image')
+    if (image && image.size > 0) {
+        // удалить старое изображение
+        if (image_path) {
+            await supabase.storage.from('partners-images').remove([image_path])
+        }
+        // загрузить новое
+        const fileName = `image-${Date.now()}.${image.name.split('.').pop()}`
+        const buffer = Buffer.from(await image.arrayBuffer())
+        const { error: uploadError } = await supabase
+            .storage
+            .from('partners-images')
+            .upload(fileName, buffer, { contentType: image.type })
+        if (uploadError) {
+            return Response.json({ message: uploadError.message }, { status: 500 })
+        }
+        image_path = fileName
+    }
+
+    const { data: updated, error } = await supabase
+        .from('partners')
+        .update({ url, image_path })
+        .eq('id', id)
+        .select()
+        .single()
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 })
+    }
+
+    return Response.json(updated, { status: 200 })
 }
 
 export async function DELETE(req, { params }) {
-    const authError = authenticate(req);
+    const authError = authenticate(req)
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status })
     }
 
-    const { id } = params;
+    const { id } = params
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        let partners = JSON.parse(fileData);
-        const index = partners.findIndex(p => p.id.toString() === id);
+    // Получаем картинку для удаления из storage
+    const { data: oldPartner } = await supabase
+        .from('partners')
+        .select('image_path')
+        .eq('id', id)
+        .single()
 
-        if (index === -1) {
-            return NextResponse.json({ message: 'Partner not found!' }, { status: 404 });
-        }
-
-        const partner = partners[index];
-        const filePath = path.join(imageDir, partner.imagePath);
-        try {
-            await fs.unlink(filePath);
-        } catch (error) {
-            console.error('Error deleting file:', error);
-        }
-
-        partners.splice(index, 1);
-        await fs.writeFile(dataFilePath, JSON.stringify(partners, null, 2), 'utf-8');
-
-        return NextResponse.json({ message: 'Partner deleted successfully!' }, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error deleting partner!' }, { status: 400 });
+    if (oldPartner?.image_path) {
+        await supabase.storage.from('partners-images').remove([oldPartner.image_path])
     }
+
+    const { error } = await supabase.from('partners').delete().eq('id', id)
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 })
+    }
+
+    return Response.json({ message: 'Partner deleted successfully!' }, { status: 200 })
 }

@@ -1,59 +1,73 @@
-import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 import { authenticate } from '@/app/api/check-auth/authenticate';
-import fs from 'fs/promises';
-import path from 'path';
+import { cookies } from 'next/headers';
 
-const dataFilePath = path.join(process.cwd(), 'src', 'db', 'programs.json');
-const imageDir = path.join(process.cwd(), 'public', 'images');
+export async function GET() {
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-export async function GET(req) {
-    try {
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const categories = JSON.parse(fileData);
-        return NextResponse.json(categories, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error fetching categories!' }, { status: 400 });
+    const { data: categories, error: catError } = await supabase
+        .from('program_categories')
+        .select('*')
+        .order('id', { ascending: true });
+
+    if (catError) {
+        return Response.json({ message: 'Error fetching categories!', error: catError.message }, { status: 400 });
     }
+
+    const { data: programs, error: progError } = await supabase
+        .from('programs')
+        .select('*');
+
+    if (progError) {
+        return Response.json({ message: 'Error fetching programs!', error: progError.message }, { status: 400 });
+    }
+
+    const withPrograms = categories.map(cat => ({
+        ...cat,
+        programs: programs.filter(prog => prog.category_id === cat.id)
+    }));
+
+    return Response.json(withPrograms, { status: 200 });
 }
 
 export async function POST(req) {
     const authError = authenticate(req);
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status });
     }
 
-    try {
-        const formData = await req.formData();
-        const { categoryName, description } = Object.fromEntries(formData);
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-        const image = formData.get("image");
-        let imagePath = '';
-        if (image !== 'null' && image !== null) {
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-            const imageName = `image-${Date.now()}.${image.name.split('.').pop()}`;
-            await fs.writeFile(path.join(imageDir, imageName), buffer);
-            imagePath = imageName;
+    const formData = await req.formData();
+    const category_name = formData.get('categoryName');
+    const description = formData.get('description');
+    let image_path = null;
+
+    const image = formData.get('image');
+    if (image && image.size > 0) {
+        const fileName = `category-${Date.now()}.${image.name.split('.').pop()}`;
+        const buffer = Buffer.from(await image.arrayBuffer());
+        const { error: uploadError } = await supabase
+            .storage
+            .from('programs-images')
+            .upload(fileName, buffer, { contentType: image.type });
+        if (uploadError) {
+            return Response.json({ message: uploadError.message }, { status: 500 });
         }
-
-        const fileData = await fs.readFile(dataFilePath, 'utf-8');
-        const categories = JSON.parse(fileData);
-
-        const newCategory = {
-            id: Date.now(),
-            categoryName,
-            description,
-            imagePath,
-            programs: []
-        };
-
-        categories.push(newCategory);
-        await fs.writeFile(dataFilePath, JSON.stringify(categories, null, 2), 'utf-8');
-
-        return NextResponse.json(newCategory, { status: 201 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error creating category!' }, { status: 400 });
+        image_path = fileName;
     }
+
+    const { data, error } = await supabase
+        .from('program_categories')
+        .insert({ category_name, description, image_path })
+        .select()
+        .single();
+
+    if (error) {
+        return Response.json({ message: error.message }, { status: 400 });
+    }
+
+    return Response.json(data, { status: 201 });
 }

@@ -21,152 +21,104 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import '@/styles/Table.css'
+import '@/styles/Table.css';
 
-import {ProgramCategoryForm, ProgramForm, ProgramDeleteForm, ProgramCategoryDeleteForm} from '../forms/ProgramForms';
+import { ProgramCategoryForm, ProgramForm, ProgramDeleteForm, ProgramCategoryDeleteForm } from '../forms/ProgramForms';
 import TextBlock from '../TextBlock';
-// MUI GENERATED CODE
 
-function ProgramRow(props) {
-
-    const {program, category} = props
-
-    const [isModalEditProgramOpen, setIsModalEditProgramOpen] = React.useState(false)
-    const [isModalDeleteProgramOpen, setIsModalDeleteProgramOpen] = React.useState(false)
-
-    const openModalEditProgram = () => {
-        setIsModalEditProgramOpen(true)
-    }
-
-    const closeModalEditProgram = () => {
-        setIsModalEditProgramOpen(false)
-    }
-
-    const openModalDeleteProgram = () => {
-        setIsModalDeleteProgramOpen(true)
-    }
-
-    const closeModalDeleteProgram = () => {
-        setIsModalDeleteProgramOpen(false)
-    }
+// ----------------------
+// ОТДЕЛЬНАЯ ПРОГРАММА
+// ----------------------
+function ProgramRow({ program, category }) {
+    const [isModalEditProgramOpen, setIsModalEditProgramOpen] = React.useState(false);
+    const [isModalDeleteProgramOpen, setIsModalDeleteProgramOpen] = React.useState(false);
 
     return (
         <React.Fragment>
             {isModalEditProgramOpen && (
-                <Dialog open={isModalEditProgramOpen} onClose={closeModalEditProgram}>
+                <Dialog open={isModalEditProgramOpen} onClose={() => setIsModalEditProgramOpen(false)}>
                     <DialogTitle>Редагувати програму</DialogTitle>
                     <DialogContent>
                         <ProgramForm category={category} data={program} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModalEditProgram}>Закрити</Button>
+                        <Button onClick={() => setIsModalEditProgramOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
 
             {isModalDeleteProgramOpen && (
-                <Dialog open={isModalDeleteProgramOpen} onClose={closeModalDeleteProgram}>
+                <Dialog open={isModalDeleteProgramOpen} onClose={() => setIsModalDeleteProgramOpen(false)}>
                     <DialogTitle>Видалити програму?</DialogTitle>
                     <DialogContent>
-                        <ProgramDeleteForm categoryId={category._id} program={program} />
+                        <ProgramDeleteForm categoryId={category.id} program={program} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModalDeleteProgram}>Закрити</Button>
+                        <Button onClick={() => setIsModalDeleteProgramOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
 
-            <TableRow key={program.name}>
-                <TableCell component="th" scope="row">
-                    {program.name}
-                </TableCell>
-                <TableCell ><TextBlock text={program.description} max={100} /></TableCell>
-                <TableCell >{program.type}</TableCell>
-                <TableCell >{program.numberOfLessons}</TableCell>
-                <TableCell >{program.lessonDuration}</TableCell>
-                <TableCell >{program.coursePrice}</TableCell>
+            <TableRow key={program.id}>
+                <TableCell component="th" scope="row">{program.name}</TableCell>
+                <TableCell><TextBlock text={program.description} max={100} /></TableCell>
+                <TableCell>{program.type}</TableCell>
+                <TableCell>{program.number_of_lessons}</TableCell>
+                <TableCell>{program.lesson_duration}</TableCell>
+                <TableCell>{program.course_price}</TableCell>
                 <TableCell align="right">
-                    <button className='table-button-events' onClick={openModalEditProgram}><EditIcon /></button>
-                    <button className='table-button-events delete' onClick={openModalDeleteProgram}><DeleteIcon /></button>
+                    <button className='table-button-events' onClick={() => setIsModalEditProgramOpen(true)}><EditIcon /></button>
+                    <button className='table-button-events delete' onClick={() => setIsModalDeleteProgramOpen(true)}><DeleteIcon /></button>
                 </TableCell>
             </TableRow>
         </React.Fragment>
-        
-    )
+    );
 }
 
-function Row(props) {
-    const { row } = props
-    const [open, setOpen] = React.useState(false)
-
-    // modals
-
-    const [isModalCreateProgramOpen, setIsModalCreateProgramOpen] = React.useState(false)
-    const [isModalEditCategoryOpen, setIsModalEditCategoryOpen] = React.useState(false)
-    const [isModalDeleteCategoryOpen, setIsModalDeleteCategoryOpen] = React.useState(false)
-
-    const openModalCreateProgram = () => {
-        setIsModalCreateProgramOpen(true)
-    }
-
-    const closeModalCreateProgram = () => {
-        setIsModalCreateProgramOpen(false)
-    }
-
-    const openModalEditCategory = () => {
-        setIsModalEditCategoryOpen(true)
-    }
-
-    const closeModalEditCategory = () => {
-        setIsModalEditCategoryOpen(false)
-    }
-
-    const openModalDeleteCategory = () => {
-        setIsModalDeleteCategoryOpen(true)
-    }
-
-    const closeModalDeleteCategory = () => {
-        setIsModalDeleteCategoryOpen(false)
-    }
-
+// ----------------------
+// КАТЕГОРИЯ + ПРОГРАММЫ ВНУТРИ НЕЁ
+// ----------------------
+function Row({ row }) {
+    const [open, setOpen] = React.useState(false);
+    const [isModalCreateProgramOpen, setIsModalCreateProgramOpen] = React.useState(false);
+    const [isModalEditCategoryOpen, setIsModalEditCategoryOpen] = React.useState(false);
+    const [isModalDeleteCategoryOpen, setIsModalDeleteCategoryOpen] = React.useState(false);
 
     return (
         <React.Fragment>
-            {/* Створити нову програму */}
+            {/* Диалоги для операций над категорией/программой */}
             {isModalCreateProgramOpen && (
-                <Dialog open={isModalCreateProgramOpen} onClose={closeModalCreateProgram}>
+                <Dialog open={isModalCreateProgramOpen} onClose={() => setIsModalCreateProgramOpen(false)}>
                     <DialogTitle>Додати програму</DialogTitle>
                     <DialogContent>
                         <ProgramForm category={row} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModalCreateProgram}>Закрити</Button>
+                        <Button onClick={() => setIsModalCreateProgramOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
 
-            {/* Редагувати категорію */}
             {isModalEditCategoryOpen && (
-                <Dialog open={isModalEditCategoryOpen} onClose={closeModalEditCategory}>
+                <Dialog open={isModalEditCategoryOpen} onClose={() => setIsModalEditCategoryOpen(false)}>
                     <DialogTitle>Редагувати категорію</DialogTitle>
                     <DialogContent>
                         <ProgramCategoryForm category={row} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModalEditCategory}>Закрити</Button>
+                        <Button onClick={() => setIsModalEditCategoryOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
 
-            {/* Видалити категорію */}
             {isModalDeleteCategoryOpen && (
-                <Dialog open={isModalDeleteCategoryOpen} onClose={closeModalDeleteCategory}>
+                <Dialog open={isModalDeleteCategoryOpen} onClose={() => setIsModalDeleteCategoryOpen(false)}>
                     <DialogTitle>Видалити категорію</DialogTitle>
                     <DialogContent>
                         <ProgramCategoryDeleteForm category={row} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModalDeleteCategory}>Закрити</Button>
+                        <Button onClick={() => setIsModalDeleteCategoryOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
@@ -181,23 +133,21 @@ function Row(props) {
                         {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                     </IconButton>
                 </TableCell>
-                <TableCell component="th" scope="row">
-                    {row.categoryName}
-                </TableCell>
+                <TableCell component="th" scope="row">{row.category_name}</TableCell>
                 <TableCell><TextBlock text={row.description} max={200} /></TableCell>
                 <TableCell align="right">
-                    <button className='table-button-events' onClick={openModalEditCategory}><EditIcon /></button>
-                    <button className='table-button-events delete' onClick={openModalDeleteCategory}><DeleteIcon /></button>
+                    <button className='table-button-events' onClick={() => setIsModalEditCategoryOpen(true)}><EditIcon /></button>
+                    <button className='table-button-events delete' onClick={() => setIsModalDeleteCategoryOpen(true)}><DeleteIcon /></button>
                 </TableCell>
             </TableRow>
             <TableRow>
                 <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                    <Collapse in={open} style={{ backgroundColor: "#f7f7f7" }} timeout="auto" >
+                    <Collapse in={open} style={{ backgroundColor: "#f7f7f7" }} timeout="auto">
                         <Box sx={{ margin: 1 }}>
                             <Typography variant="h6" gutterBottom component="div">
                                 Програми
                             </Typography>
-                            <Table size="small" aria-label="purchases">
+                            <Table size="small" aria-label="programs">
                                 <TableHead>
                                     <TableRow>
                                         <TableCell><b>Назва програми</b></TableCell>
@@ -210,10 +160,14 @@ function Row(props) {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {row.programs.map((programsRow) => (
-                                        <ProgramRow program={programsRow} category={row} />
+                                    {(row.programs || []).map((program) => (
+                                        <ProgramRow key={program.id} program={program} category={row} />
                                     ))}
-                                    <TableCell><button onClick={openModalCreateProgram}><AddIcon /></button></TableCell>
+                                    <TableRow>
+                                        <TableCell colSpan={7}>
+                                            <button onClick={() => setIsModalCreateProgramOpen(true)}><AddIcon /></button>
+                                        </TableCell>
+                                    </TableRow>
                                 </TableBody>
                             </Table>
                         </Box>
@@ -224,50 +178,53 @@ function Row(props) {
     );
 }
 
+// ----------------------
+// ПРОП ТАЙПЫ
+// ----------------------
 Row.propTypes = {
     row: PropTypes.shape({
-        _id: PropTypes.string.isRequired,
-        categoryName: PropTypes.string.isRequired,
-        description: PropTypes.string.isRequired,
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+        category_name: PropTypes.string.isRequired,
+        description: PropTypes.string,
         programs: PropTypes.arrayOf(
             PropTypes.shape({
+                id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
                 name: PropTypes.string.isRequired,
-                description: PropTypes.string.isRequired,
-                type: PropTypes.string.isRequired,
-                numberOfLessons: PropTypes.string.isRequired,
-                lessonDuration: PropTypes.string.isRequired,
-                coursePrice: PropTypes.number.isRequired,
-                _id: PropTypes.string.isRequired,
-            }),
-        ).isRequired,
+                description: PropTypes.string,
+                type: PropTypes.string,
+                number_of_lessons: PropTypes.string,
+                lesson_duration: PropTypes.string,
+                course_duration: PropTypes.string,
+                course_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+                image_path: PropTypes.string,
+                created_at: PropTypes.string,
+                category_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            })
+        ),
     }).isRequired,
 };
 
-export default function ProgramCollapsibleTable(props) {
+// ----------------------
+// ГЛАВНАЯ ТАБЛИЦА
+// ----------------------
+export default function ProgramCollapsibleTable({ rows }) {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-    const openModal = () => {
-        setIsModalOpen(true)
-    }
-
-    const closeModal = () => {
-        setIsModalOpen(false)
-    }
     return (
         <React.Fragment>
             {isModalOpen && (
-                <Dialog open={isModalOpen} onClose={closeModal}>
+                <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
                     <DialogTitle>Додати категорію</DialogTitle>
                     <DialogContent>
                         <ProgramCategoryForm />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={closeModal}>Закрити</Button>
+                        <Button onClick={() => setIsModalOpen(false)}>Закрити</Button>
                     </DialogActions>
                 </Dialog>
             )}
-            <TableContainer component={Paper} >
-                <Table aria-label="collapsible table" >
+            <TableContainer component={Paper}>
+                <Table aria-label="collapsible table">
                     <TableHead>
                         <TableRow>
                             <TableCell />
@@ -277,14 +234,17 @@ export default function ProgramCollapsibleTable(props) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {props.rows.map((row) => (
-                            <Row key={row.name} row={row} />
+                        {(rows || []).map((row) => (
+                            <Row key={row.id} row={row} />
                         ))}
-                        <TableCell><button onClick={openModal}><AddIcon /></button></TableCell>
+                        <TableRow>
+                            <TableCell colSpan={4}>
+                                <button onClick={() => setIsModalOpen(true)}><AddIcon /></button>
+                            </TableCell>
+                        </TableRow>
                     </TableBody>
                 </Table>
             </TableContainer>
         </React.Fragment>
-
     );
 }

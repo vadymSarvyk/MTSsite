@@ -1,58 +1,78 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { NextResponse } from 'next/server';
-import { authenticate } from '@/app/api/check-auth/authenticate';
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { authenticate } from '@/app/api/check-auth/authenticate'
 
-const bannerJsonPath = path.resolve(process.cwd(), 'src', 'db', 'banner.json');
-const imagesDir = path.resolve(process.cwd(), 'public', 'images');
-
-async function getCurrentBannerName() {
-    try {
-        const data = await fs.readFile(bannerJsonPath, 'utf8');
-        return JSON.parse(data).bannerImage || "people.jpg";
-    } catch {
-        return "people.jpg";
-    }
-}
-
-async function setBannerName(imageName) {
-    const json = { bannerImage: imageName };
-    await fs.writeFile(bannerJsonPath, JSON.stringify(json, null, 2));
-}
+const BUCKET = 'page-assets'
+const DEFAULT_IMAGE = 'people.jpg' 
 
 export async function GET() {
-    // Чтобы фронт мог узнать, какая сейчас картинка
-    try {
-        const bannerImage = await getCurrentBannerName();
-        return NextResponse.json({ bannerImage });
-    } catch {
-        return NextResponse.json({ bannerImage: "people.jpg" });
-    }
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
+    const { data, error } = await supabase
+        .from('page')
+        .select('banner_image')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+    let image_path = data?.banner_image || DEFAULT_IMAGE
+
+    const { data: urlData } = supabase
+        .storage
+        .from(BUCKET)
+        .getPublicUrl(image_path)
+
+    return Response.json({ bannerUrl: urlData?.publicUrl || '/images/people.jpg' })
 }
 
 export async function POST(req) {
-    const authError = authenticate(req);
+    const authError = authenticate(req)
     if (authError) {
-        return NextResponse.json({ message: authError.error }, { status: authError.status });
+        return Response.json({ message: authError.error }, { status: authError.status })
     }
-    try {
-        const formData = await req.formData();
-        const file = formData.get('banner');
-        if (!file || file.size === 0) {
-            return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
-        }
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-        // Генерируем уникальное имя для файла
-        const imageName = "banner-" + Date.now() + "." + file.name.split('.').pop();
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
-
-        await fs.writeFile(path.resolve(imagesDir, imageName), buffer);
-        await setBannerName(imageName);
-
-        return NextResponse.json({ bannerImage: imageName, message: 'Banner updated!' }, { status: 200 });
-    } catch (e) {
-        console.error(e);
-        return NextResponse.json({ message: 'Error updating banner!' }, { status: 500 });
+    const formData = await req.formData()
+    const file = formData.get('banner')
+    if (!file || file.size === 0) {
+        return Response.json({ message: 'No file uploaded' }, { status: 400 })
     }
+
+    const { data: oldData } = await supabase
+        .from('page')
+        .select('banner_image')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+    let old_banner = oldData?.banner_image
+
+    const imageName = `banner-${Date.now()}.${file.name.split('.').pop()}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { error: uploadError } = await supabase
+        .storage
+        .from(BUCKET)
+        .upload(imageName, buffer, { contentType: file.type })
+    if (uploadError) {
+        return Response.json({ message: uploadError.message }, { status: 500 })
+    }
+
+    if (old_banner && old_banner !== DEFAULT_IMAGE) {
+        await supabase.storage.from(BUCKET).remove([old_banner])
+    }
+
+    const { error: upsertError } = await supabase
+        .from('page')
+        .upsert({ id: 1, banner_image: imageName, updated_at: new Date().toISOString() }, { onConflict: ['id'] })
+
+    if (upsertError) {
+        return Response.json({ message: upsertError.message }, { status: 500 })
+    }
+
+    const { data: urlData } = supabase
+        .storage
+        .from(BUCKET)
+        .getPublicUrl(imageName)
+
+    return Response.json({ bannerUrl: urlData?.publicUrl, message: 'Banner updated!' }, { status: 200 })
 }

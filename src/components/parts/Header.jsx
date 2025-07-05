@@ -55,7 +55,7 @@ const Header = () => {
                         <br />
                         <b>м. Кривий Ріг, вул. Мусоргського, 20</b>
                         <div className="button-join-us-container">
-                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSelerd0rrSDl2TF0wbaJjpIkfUoDVppXkI0yVOuHRDMiMLW6w/viewform" target="_blank" className="join-button">ПРОЙТИ ТЕСТ З АНГЛІЙСЬКОЇ МОВИ</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSelerd0rrSDl2TF0wbaJjpIkfUoDVppXkI0yVOuHRDMiMLW6w/viewform" target="_blank" className="join-button test-button">ПРОЙТИ ТЕСТ З АНГЛІЙСЬКОЇ МОВИ</a>
                     </div>
                     </div>
                 </div>

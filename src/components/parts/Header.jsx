@@ -54,6 +54,9 @@ const Header = () => {
                         <b>м. Кривий Ріг, вул. Героїв АТО, 11</b>
                         <br />
                         <b>м. Кривий Ріг, вул. Мусоргського, 20</b>
+                        <div className="button-join-us-container">
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLScBlL8YxYGbj66ecB10cr8AVRDqPDzJJrsfAyKooos0iF62ag/viewform" target="_blank" className="join-button">ПРОЙТИ ТЕСТ З АНГЛІЙСЬКОЇ МОВИ</a>
+                    </div>
                     </div>
                 </div>
             </div>

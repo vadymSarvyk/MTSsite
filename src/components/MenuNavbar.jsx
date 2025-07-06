@@ -26,7 +26,7 @@ function MenuNavbar() {
                     <li><a href="#about">Про нас</a></li>
                     <li><a href="#programs">Програми</a></li>
                     <li><a href="#events">Івенти</a></li>
-                    <li><a href="/art-english">ART & ENGLISH</a></li>
+                   /* <li><a href="/art-english">ART & ENGLISH</a></li>*/
                     <li><a href="#contact">Контакти</a></li>
                 </ul>
                 <div className={`navbar-extra ${isOpen ? 'open' : ''}`}>
@@ -44,7 +44,12 @@ function MenuNavbar() {
                         </div>
                         <div className="text-center">
                             <b>+38(097)-111-78-95</b><br />
-                            <b>м. Кривий Ріг, пр. Миру 29В, оф.10</b>
+                             <b>м. Кривий Ріг, вул. Героїв АТО, 11</b>
+                        <br />
+                        <b>м. Кривий Ріг, вул. Мусоргського, 20</b>
+                        <div className="button-join-us-container">
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSelerd0rrSDl2TF0wbaJjpIkfUoDVppXkI0yVOuHRDMiMLW6w/viewform" target="_blank" className="join-button test-button">ПРОЙТИ ТЕСТ З АНГЛІЙСЬКОЇ МОВИ</a>
+                    </div>
                         </div>
                     </div>
                 </div>

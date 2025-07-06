@@ -39,13 +39,13 @@ const Header = () => {
                 </div>
                 <div className="social-section">
                     <div className="social-icons">
-                        <a href="https://t.me/mtschool_admin" className="social-icon">
+                        <a href="https://t.me/mtschool_admin" target="_blank" className="social-icon">
                             <img src="/images/telegram-128.png" alt="Telegram" />
                         </a>
-                        <a href="https://www.facebook.com/mtschool.kr" className="social-icon">
+                        <a href="https://www.facebook.com/mtschool.kr" target="_blank" className="social-icon">
                             <img src="/images/facebook-128.png" alt="Facebook" />
                         </a>
-                        <a href="https://www.instagram.com/mtschool_kr" className="social-icon">
+                        <a href="https://www.instagram.com/mtschool_kr" target="_blank" className="social-icon">
                             <img src="/images/instagram-2-128.png" alt="Instagram" />
                         </a>
                     </div>

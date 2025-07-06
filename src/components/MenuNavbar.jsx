@@ -26,7 +26,7 @@ function MenuNavbar() {
                     <li><a href="#about">Про нас</a></li>
                     <li><a href="#programs">Програми</a></li>
                     <li><a href="#events">Івенти</a></li>
-                   /* <li><a href="/art-english">ART & ENGLISH</a></li>*/
+                  
                     <li><a href="#contact">Контакти</a></li>
                 </ul>
                 <div className={`navbar-extra ${isOpen ? 'open' : ''}`}>
